@@ -42,11 +42,10 @@ public class SimplePersonService implements PersonService {
 
     @Override
     public boolean delete(Person person) {
-        try {
-            personRepository.deleteById(person.getId());
+        if (personRepository.existsById(person.getId())) {
+            personRepository.delete(person);
             return true;
-        } catch (Exception e) {
-            return false;
         }
+        return false;
     }
 }
