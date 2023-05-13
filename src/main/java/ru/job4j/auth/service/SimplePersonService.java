@@ -48,4 +48,9 @@ public class SimplePersonService implements PersonService {
         }
         return false;
     }
+
+    @Override
+    public Optional<Person> findByLogin(String login) {
+        return personRepository.findByLogin(login);
+    }
 }

@@ -15,4 +15,5 @@ public interface PersonService {
     boolean update(Person person);
 
     boolean delete(Person person);
+    Optional<Person> findByLogin(String login);
 }
