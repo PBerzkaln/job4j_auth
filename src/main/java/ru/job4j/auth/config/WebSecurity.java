@@ -17,13 +17,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.context.annotation.Bean;
 import ru.job4j.auth.filter.JWTAuthenticationFilter;
 import ru.job4j.auth.filter.JWTAuthorizationFilter;
-import ru.job4j.auth.service.SimpleUserDetailsService;
+import ru.job4j.auth.service.SimplePersonService;
 
 @EnableWebSecurity
 @AllArgsConstructor
 @Configuration
 public class WebSecurity extends WebSecurityConfigurerAdapter {
-    private final SimpleUserDetailsService userDetailsService;
+    private final SimplePersonService simplePersonService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Override
@@ -42,7 +42,7 @@ public class WebSecurity extends WebSecurityConfigurerAdapter {
 
     @Override
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder);
+        auth.userDetailsService(simplePersonService).passwordEncoder(bCryptPasswordEncoder);
     }
 
     @Bean
