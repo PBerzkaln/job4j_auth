@@ -1,13 +1,21 @@
 package ru.job4j.auth.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.service.PersonService;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -22,21 +30,35 @@ import java.util.List;
 @RequestMapping("/person")
 @AllArgsConstructor
 public class PersonController {
+    private static final Logger LOG = LogManager.getLogger(PersonController.class.getName());
     private final PersonService personService;
     private final BCryptPasswordEncoder encoder;
+    private final ObjectMapper objectMapper;
 
     @GetMapping("/all")
     public List<Person> findAll() {
         return personService.findAll();
     }
 
+    /**
+     * Если не нужно как-то отслеживать исключения приложения,
+     * прописывать сложную логику, указывать специфические детали об ошибках и т.п.,
+     * можно просто пробрасывать исключение ResponseStatusException.
+     *
+     * <br>ResponseStatusException в конструкторе принимает HTTP статус и сообщение,
+     * которое нужно вывести пользователю.
+     *
+     * @param id
+     * @return
+     */
     @GetMapping("/{id}")
     public ResponseEntity<Person> findById(@PathVariable int id) {
         var person = personService.findById(id);
-        return new ResponseEntity<>(
-                person.orElse(new Person()),
-                person.isPresent() ? HttpStatus.OK : HttpStatus.NOT_FOUND
-        );
+        if (person.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Person is not found. Please, check requisites.");
+        }
+        return new ResponseEntity<>(person.get(), HttpStatus.OK);
     }
 
     @PostMapping("/sign-up")
@@ -44,11 +66,17 @@ public class PersonController {
         /**
          * Пароли хешируются и прямом виде не хранятся в базе.
          */
+        var login = person.getLogin();
+        var password = person.getPassword();
+        if (login == null || password == null) {
+            throw new NullPointerException("Username and password mustn't be empty");
+        }
+        if (password.length() < 6) {
+            throw new IllegalArgumentException(
+                    "Invalid password. Password length must be more than 5 characters.");
+        }
         person.setPassword(encoder.encode(person.getPassword()));
-        return new ResponseEntity<>(
-                personService.create(person).get(),
-                HttpStatus.CREATED
-        );
+        return new ResponseEntity<>(personService.create(person).get(), HttpStatus.CREATED);
     }
 
     @PutMapping("/")
@@ -71,5 +99,48 @@ public class PersonController {
                     .body("Не удалось удалить данные");
         }
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Данная аннотация позволяет отслеживать
+     * и обрабатывать исключения на уровне класса.
+     * Если использовать ее например в контроллере,
+     * то исключения только данного контроллера будут обрабатываться.
+     *
+     * <br>value = { IllegalArgumentException.class } указывает,
+     * что обработчик будет обрабатывать только данное исключение.
+     * Можно перечислить их больше, т.к. value это массив.
+     *
+     * <br>Метод, помеченный как @ExceptionHandler,
+     * поддерживает внедрение аргументов и возвращаемого типа в рантайме,
+     * указанных в спецификации. По этому мы можем внедрить запрос,
+     * ответ и само исключение, чтобы прописать какую-либо логику.
+     *
+     * <br>Метод, помеченный как @ExceptionHandler,
+     * поддерживает внедрение аргументов и возвращаемого типа в рантайме,
+     * указанных в спецификации. По этому мы можем внедрить запрос,
+     * ответ и само исключение, чтобы прописать какую-либо логику.
+     *
+     * <br>В данном случае при возникновении исключения IllegalArgumentException,
+     * метод exceptionHandler() отлавливает его и меняет ответ,
+     * а именно его статус и тело. Также в последней строке происходит логгирование.
+     *
+     * @param e
+     * @param request
+     * @param response
+     * @throws IOException
+     */
+    @ExceptionHandler(value = {IllegalArgumentException.class})
+    public void exceptionHandler(Exception e, HttpServletRequest request,
+                                 HttpServletResponse response) throws IOException {
+        response.setStatus(HttpStatus.BAD_REQUEST.value());
+        response.setContentType("application/json");
+        response.getWriter().write(objectMapper.writeValueAsString(new HashMap<>() {
+            {
+                put("message", e.getMessage());
+                put("type", e.getClass());
+            }
+        }));
+        LOG.error(e.getLocalizedMessage());
     }
 }
