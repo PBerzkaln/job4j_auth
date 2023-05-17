@@ -15,6 +15,7 @@ import ru.job4j.auth.service.PersonService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -79,7 +80,7 @@ public class PersonController {
         return new ResponseEntity<>(personService.create(person).get(), HttpStatus.CREATED);
     }
 
-    @PutMapping("/")
+    @PutMapping("/update")
     public ResponseEntity<String> update(@RequestBody Person person) {
         var rsl = personService.update(person);
         if (!rsl) {
@@ -142,5 +143,16 @@ public class PersonController {
             }
         }));
         LOG.error(e.getLocalizedMessage());
+    }
+
+    @PatchMapping("/partUpdate")
+    public ResponseEntity<String> partUpdate(@RequestBody Person person)
+            throws InvocationTargetException, IllegalAccessException {
+        var rsl = personService.partUpdate(person);
+        if (!rsl) {
+            return ResponseEntity.badRequest()
+                    .body("Не удалось частично обновить данные");
+        }
+        return ResponseEntity.ok().build();
     }
 }

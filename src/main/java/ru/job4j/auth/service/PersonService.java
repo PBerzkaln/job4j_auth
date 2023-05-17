@@ -2,6 +2,7 @@ package ru.job4j.auth.service;
 
 import ru.job4j.auth.model.Person;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,4 +17,5 @@ public interface PersonService {
 
     boolean delete(Person person);
     Optional<Person> findByLogin(String login);
+    public boolean partUpdate(Person person) throws InvocationTargetException, IllegalAccessException;
 }
