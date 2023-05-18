@@ -9,12 +9,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import ru.job4j.auth.dto.PersonDTO;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.repository.PersonRepository;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,38 +75,13 @@ public class SimplePersonService implements PersonService, UserDetailsService {
     }
 
     @Override
-    public boolean partUpdate(Person person) throws InvocationTargetException, IllegalAccessException {
-        var rsl = false;
-        if (personRepository.existsById(person.getId())) {
-            rsl = partUpdateHandler(person);
+    public boolean partUpdate(PersonDTO personDTO) {
+        var person = personRepository.findById(personDTO.getId());
+        if (person.isPresent()) {
+            person.get().setPassword(personDTO.getPassword());
+            personRepository.save(person.get());
+            return true;
         }
-        return rsl;
-    }
-
-    private boolean partUpdateHandler(Person person) throws InvocationTargetException, IllegalAccessException {
-        var current = personRepository.findById(person.getId()).get();
-        var methods = current.getClass().getDeclaredMethods();
-        var namePerMethod = new HashMap<String, Method>();
-        for (var method : methods) {
-            var name = method.getName();
-            if (name.startsWith("get") || name.startsWith("set")) {
-                namePerMethod.put(name, method);
-            }
-        }
-        for (var name : namePerMethod.keySet()) {
-            if (name.startsWith("get")) {
-                var getMethod = namePerMethod.get(name);
-                var setMethod = namePerMethod.get(name.replace("get", "set"));
-                if (setMethod == null) {
-                    return false;
-                }
-                var newValue = getMethod.invoke(person);
-                if (newValue != null) {
-                    setMethod.invoke(current, newValue);
-                }
-            }
-        }
-        personRepository.save(current);
-        return true;
+        return false;
     }
 }

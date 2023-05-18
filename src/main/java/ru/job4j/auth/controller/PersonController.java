@@ -9,13 +9,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import ru.job4j.auth.dto.PersonDTO;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.service.PersonService;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -117,11 +117,6 @@ public class PersonController {
      * указанных в спецификации. По этому мы можем внедрить запрос,
      * ответ и само исключение, чтобы прописать какую-либо логику.
      *
-     * <br>Метод, помеченный как @ExceptionHandler,
-     * поддерживает внедрение аргументов и возвращаемого типа в рантайме,
-     * указанных в спецификации. По этому мы можем внедрить запрос,
-     * ответ и само исключение, чтобы прописать какую-либо логику.
-     *
      * <br>В данном случае при возникновении исключения IllegalArgumentException,
      * метод exceptionHandler() отлавливает его и меняет ответ,
      * а именно его статус и тело. Также в последней строке происходит логгирование.
@@ -146,9 +141,8 @@ public class PersonController {
     }
 
     @PatchMapping("/partUpdate")
-    public ResponseEntity<String> partUpdate(@RequestBody Person person)
-            throws InvocationTargetException, IllegalAccessException {
-        var rsl = personService.partUpdate(person);
+    public ResponseEntity<String> partUpdate(@RequestBody PersonDTO personDTO) {
+        var rsl = personService.partUpdate(personDTO);
         if (!rsl) {
             return ResponseEntity.badRequest()
                     .body("Не удалось частично обновить данные");
