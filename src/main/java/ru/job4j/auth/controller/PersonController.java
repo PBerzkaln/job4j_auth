@@ -82,6 +82,7 @@ public class PersonController {
 
     @PutMapping("/update")
     public ResponseEntity<String> update(@RequestBody Person person) {
+        person.setPassword(encoder.encode(person.getPassword()));
         var rsl = personService.update(person);
         if (!rsl) {
             return ResponseEntity.badRequest()
@@ -142,6 +143,7 @@ public class PersonController {
 
     @PatchMapping("/partUpdate")
     public ResponseEntity<String> partUpdate(@RequestBody PersonDTO personDTO) {
+        personDTO.setPassword(encoder.encode(personDTO.getPassword()));
         var rsl = personService.partUpdate(personDTO);
         if (!rsl) {
             return ResponseEntity.badRequest()
