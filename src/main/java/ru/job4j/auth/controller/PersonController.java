@@ -7,11 +7,13 @@ import org.apache.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.auth.dto.PersonDTO;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.service.PersonService;
+import ru.job4j.auth.util.Operation;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -63,25 +65,18 @@ public class PersonController {
     }
 
     @PostMapping("/sign-up")
-    public ResponseEntity<Person> create(@RequestBody Person person) {
+    public ResponseEntity<Person> create(@Validated(Operation.OnCreate.class)
+                                         @RequestBody Person person) {
         /**
          * Пароли хешируются и прямом виде не хранятся в базе.
          */
-        var login = person.getLogin();
-        var password = person.getPassword();
-        if (login == null || password == null) {
-            throw new NullPointerException("Username and password mustn't be empty");
-        }
-        if (password.length() < 6) {
-            throw new IllegalArgumentException(
-                    "Invalid password. Password length must be more than 5 characters.");
-        }
         person.setPassword(encoder.encode(person.getPassword()));
         return new ResponseEntity<>(personService.create(person).get(), HttpStatus.CREATED);
     }
 
     @PutMapping("/update")
-    public ResponseEntity<String> update(@RequestBody Person person) {
+    public ResponseEntity<String> update(@Validated(Operation.OnUpdate.class)
+                                         @RequestBody Person person) {
         person.setPassword(encoder.encode(person.getPassword()));
         var rsl = personService.update(person);
         if (!rsl) {
@@ -92,13 +87,26 @@ public class PersonController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable int id) {
+    public ResponseEntity<String> delete(@Validated(Operation.OnDelete.class)
+                                         @PathVariable int id) {
         Person person = new Person();
         person.setId(id);
         var rsl = personService.delete(person);
         if (!rsl) {
             return ResponseEntity.badRequest()
                     .body("Не удалось удалить данные");
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/partUpdate")
+    public ResponseEntity<String> partUpdate(@Validated(Operation.OnPartUpdate.class)
+                                             @RequestBody PersonDTO personDTO) {
+        personDTO.setPassword(encoder.encode(personDTO.getPassword()));
+        var rsl = personService.partUpdate(personDTO);
+        if (!rsl) {
+            return ResponseEntity.badRequest()
+                    .body("Не удалось частично обновить данные");
         }
         return ResponseEntity.ok().build();
     }
@@ -139,16 +147,5 @@ public class PersonController {
             }
         }));
         LOG.error(e.getLocalizedMessage());
-    }
-
-    @PatchMapping("/partUpdate")
-    public ResponseEntity<String> partUpdate(@RequestBody PersonDTO personDTO) {
-        personDTO.setPassword(encoder.encode(personDTO.getPassword()));
-        var rsl = personService.partUpdate(personDTO);
-        if (!rsl) {
-            return ResponseEntity.badRequest()
-                    .body("Не удалось частично обновить данные");
-        }
-        return ResponseEntity.ok().build();
     }
 }
